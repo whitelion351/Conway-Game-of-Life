@@ -14,6 +14,88 @@ max_pixel = 255.0
 min_pixel = 0.0
 
 
+def create_grid(size_x=5, size_y=5, populate=True, fill_type="random_dots", fill_text=""):
+    grid = np.zeros((size_x, size_y))
+    if populate is True:
+        if fill_type.find("random_dots") >= 0:
+            choices = [x for x in range(sparsity)]
+            x_center = size_x // 2
+            y_center = size_y // 2
+            for y in grid[x_center-5:x_center+5, :]:
+                for i, x in enumerate(y):
+                    if y_center - 5 < i < y_center + 5:
+                        if random.choice(choices) == 1:
+                            y[i] = max_pixel
+        if fill_type.find("text") >= 0:
+            if size_x != 5:
+                spx = (size_x // 2) - 2
+            else:
+                spx = 0
+            spy = (size_y // 2) - ((len(fill_text) // 2) * 5) - len(fill_text) // 1.35
+            spy = int(spy)
+            cursor = spy
+            for letter in fill_text:
+                print("getting array for letter", letter)
+                grid[spx:spx+5, cursor:cursor+5] = create_array_for_letter(letter)
+                cursor += 6
+
+        return grid
+
+
+test_text = "hip hop lives"
+
+
+def next_generation(current):
+    new = current.copy()
+    still_active = False
+    for ix, x in enumerate(current):
+        for iy, y in enumerate(x):
+            if ix == len(current)-1:
+                x_to_check = [ix - 1, ix, 0]
+            else:
+                x_to_check = [ix - 1, ix, ix + 1]
+            if iy == len(x)-1:
+                y_to_check = [iy - 1, iy, 0]
+            else:
+                y_to_check = [iy - 1, iy, iy + 1]
+            neighbors = 0
+            for cx in x_to_check:
+                for cy in y_to_check:
+                    if cx == ix and cy == iy:
+                        pass
+                    elif current[cx, cy] == max_pixel:
+                        neighbors += 1
+            if current[ix, iy] == min_pixel and neighbors in born_rules:
+                new[ix, iy] = max_pixel
+                still_active = True
+            elif current[ix, iy] == max_pixel and neighbors in survive_rules:
+                new[ix, iy] = max_pixel
+            else:
+                new[ix, iy] = min_pixel
+    return new, still_active
+
+
+def show_generation(grid):
+    img = Image.fromarray(grid.astype("uint8"), "L")
+    img = img.resize((world_size_x*view_zoom, world_size_y*view_zoom))
+    cv2.imshow("env", np.array(img))
+    cv2.waitKey(1)
+
+
+def switch_grid(old_grid, new_grid=None, s_type=None):
+    grid = old_grid.copy()
+    if s_type == "vertical wipe":
+        for i, x in enumerate(grid):
+            for i2, y, in enumerate(x):
+                grid[i, i2] = 10
+            show_generation(grid)
+            sleep(0.01)
+            for i2, y, in enumerate(x):
+                grid[i, i2] = min_pixel if new_grid is None else new_grid[i, i2]
+    else:
+        return
+
+
 def create_array_for_letter(letter=None):
     if letter is None or len(letter) != 1:
         print("you need to pass a string of length 1 to this method")
@@ -157,88 +239,6 @@ def create_array_for_letter(letter=None):
                 [0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0]
             ]
-
-
-def create_grid(size_x=5, size_y=5, populate=True, fill_type="random_dots", fill_text=""):
-    grid = np.zeros((size_x, size_y))
-    if populate is True:
-        if fill_type.find("random_dots") >= 0:
-            choices = [x for x in range(sparsity)]
-            x_center = size_x // 2
-            y_center = size_y // 2
-            for y in grid[x_center-5:x_center+5, :]:
-                for i, x in enumerate(y):
-                    if y_center - 5 < i < y_center + 5:
-                        if random.choice(choices) == 1:
-                            y[i] = max_pixel
-        if fill_type.find("text") >= 0:
-            if size_x != 5:
-                spx = (size_x // 2) - 2
-            else:
-                spx = 0
-            spy = (size_y // 2) - ((len(fill_text) // 2) * 5) - len(fill_text) // 1.35
-            spy = int(spy)
-            cursor = spy
-            for letter in fill_text:
-                print("getting array for letter", letter)
-                grid[spx:spx+5, cursor:cursor+5] = create_array_for_letter(letter)
-                cursor += 6
-
-        return grid
-
-
-test_text = "hip hop lives"
-
-
-def next_generation(current):
-    new = current.copy()
-    still_active = False
-    for ix, x in enumerate(current):
-        for iy, y in enumerate(x):
-            if ix == len(current)-1:
-                x_to_check = [ix - 1, ix, 0]
-            else:
-                x_to_check = [ix - 1, ix, ix + 1]
-            if iy == len(x)-1:
-                y_to_check = [iy - 1, iy, 0]
-            else:
-                y_to_check = [iy - 1, iy, iy + 1]
-            neighbors = 0
-            for cx in x_to_check:
-                for cy in y_to_check:
-                    if cx == ix and cy == iy:
-                        pass
-                    elif current[cx, cy] == max_pixel:
-                        neighbors += 1
-            if current[ix, iy] == min_pixel and neighbors in born_rules:
-                new[ix, iy] = max_pixel
-                still_active = True
-            elif current[ix, iy] == max_pixel and neighbors in survive_rules:
-                new[ix, iy] = max_pixel
-            else:
-                new[ix, iy] = min_pixel
-    return new, still_active
-
-
-def show_generation(grid):
-    img = Image.fromarray(grid.astype("uint8"), "L")
-    img = img.resize((world_size_x*view_zoom, world_size_y*view_zoom))
-    cv2.imshow("env", np.array(img))
-    cv2.waitKey(1)
-
-
-def switch_grid(old_grid, new_grid=None, s_type=None):
-    grid = old_grid.copy()
-    if s_type == "vertical wipe":
-        for i, x in enumerate(grid):
-            for i2, y, in enumerate(x):
-                grid[i, i2] = 10
-            show_generation(grid)
-            sleep(0.01)
-            for i2, y, in enumerate(x):
-                grid[i, i2] = min_pixel if new_grid is None else new_grid[i, i2]
-    else:
-        return
 
 
 new_world = create_grid(world_size_y, world_size_x, fill_type="random_dots", fill_text=test_text)
